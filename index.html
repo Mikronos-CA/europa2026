@@ -73,6 +73,13 @@ body {
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* ── ERROR MESSAGE ── */
+.error-box {
+  max-width: 900px; margin: 80px auto; padding: 30px;
+  background: #2d1414; border: 1px solid #c62828; border-radius: var(--radius);
+  color: #ef9a9a; font-size: 13px; white-space: pre-wrap;
+}
+
 /* ── HERO ── */
 .hero { padding: 72px 20px 24px; max-width: 900px; margin: 0 auto; }
 .hero-eyebrow { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
@@ -80,21 +87,6 @@ body {
 .hero-title em { color: var(--gold); font-style: italic; }
 .hero-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
 .hero-meta span { display: flex; align-items: center; gap: 5px; }
-
-/* ── CITY TABS ── */
-.city-strip { max-width: 900px; margin: 0 auto; padding: 0 20px 20px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
-.city-strip::-webkit-scrollbar { display: none; }
-.city-pill {
-  flex-shrink: 0; display: flex; align-items: center; gap: 7px;
-  padding: 9px 16px; border-radius: var(--radius); border: 1px solid var(--border);
-  background: var(--surface); cursor: pointer; transition: all .2s;
-  font-size: 12px; font-weight: 500; color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
-}
-.city-pill.active { border-color: var(--city-color); background: var(--surface2); color: var(--text); }
-.city-pill .flag { font-size: 16px; }
-.city-pill .nights { font-size: 10px; color: var(--muted); font-weight: 400; }
-.city-pill.active .nights { color: var(--city-color); }
 
 /* ── SEARCH ── */
 .search-wrap { max-width: 900px; margin: 0 auto; padding: 0 20px 16px; }
@@ -271,7 +263,6 @@ body {
 /* ── KEYBOARD HINT ── */
 .kbd-hint { font-size: 10px; color: var(--muted); text-align: center; padding: 6px; opacity: 0.7; }
 
-/* Scrollbar desktop */
 @media (min-width: 700px) {
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
@@ -301,7 +292,6 @@ body {
 const TRIP = {
   traveler: "Jose, Heberth, Pepe y Warren",
   dates: "21 Ago — 7 Sep 2026",
-  // Salida el 21 de agosto (YYJ)
   departure: new Date(2026, 7, 21),
   destinations: [
     {
@@ -487,8 +477,15 @@ let currentView = "overview";
 let currentCityId = null;
 let searchQuery = "";
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-function getColor(d) { return d.color; }
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+function escapeAttr(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
 function urgBadge(u) {
   const labels = { critica:"CRITICA", alta:"ALTA", media:"MEDIA", walk:"WALK-IN" };
@@ -501,18 +498,23 @@ function urbClass(u) {
 }
 
 function section(id, icon, title, content, openByDefault) {
-  const saved = loadField('sec-' + id);
-  const isOpen = saved !== '' ? (saved === 'true') : openByDefault;
-  const openClass = isOpen ? " open" : "";
-  const bodyClass = isOpen ? " open" : "";
-  return `
-  <div class="section${openClass}" id="sec-${id}">
-    <div class="section-header" onclick="toggleSection('sec-${id}')">
-      <span class="section-title"><span class="section-icon">${icon}</span>${title}</span>
-      <span class="section-toggle">⌃</span>
-    </div>
-    <div class="section-body${bodyClass}">${content}</div>
-  </div>`;
+  try {
+    const saved = loadField('sec-' + id);
+    const isOpen = saved !== '' ? (saved === 'true') : openByDefault;
+    const openClass = isOpen ? " open" : "";
+    const bodyClass = isOpen ? " open" : "";
+    return `
+    <div class="section${openClass}" id="sec-${id}">
+      <div class="section-header" onclick="toggleSection('sec-${id}')">
+        <span class="section-title"><span class="section-icon">${icon}</span>${title}</span>
+        <span class="section-toggle">⌃</span>
+      </div>
+      <div class="section-body${bodyClass}">${content}</div>
+    </div>`;
+  } catch(e) {
+    console.error(e);
+    return `<div class="error-box">Error generando sección ${id}: ${escapeHtml(e.message)}</div>`;
+  }
 }
 
 function toggleSection(id) {
@@ -525,99 +527,98 @@ function toggleSection(id) {
 
 // ─── RENDER OVERVIEW ─────────────────────────────────────────────────────────
 function renderOverview() {
-  const now = new Date();
-  const dep = TRIP.departure;
-  const diffDays = Math.ceil((dep.getTime() - now.getTime()) / (1000*60*60*24));
-  const days = Math.max(0, diffDays);
-  const weeks = Math.floor(days / 7);
-  let months = (dep.getFullYear() - now.getFullYear()) * 12 + (dep.getMonth() - now.getMonth());
-  if (now.getDate() > dep.getDate()) months--;
-  months = Math.max(0, months);
+  try {
+    const now = new Date();
+    const dep = TRIP.departure;
+    const diffDays = Math.ceil((dep.getTime() - now.getTime()) / (1000*60*60*24));
+    const days = Math.max(0, diffDays);
+    const weeks = Math.floor(days / 7);
+    let months = (dep.getFullYear() - now.getFullYear()) * 12 + (dep.getMonth() - now.getMonth());
+    if (now.getDate() > dep.getDate()) months--;
+    months = Math.max(0, months);
 
-  const query = searchQuery.toLowerCase().trim();
-  const filteredDests = query
-    ? TRIP.destinations.filter(d =>
-        d.city.toLowerCase().includes(query) ||
-        d.country.toLowerCase().includes(query) ||
-        d.hotel.name.toLowerCase().includes(query) ||
-        d.id.toLowerCase().includes(query)
-      )
-    : TRIP.destinations;
+    const query = searchQuery.toLowerCase().trim();
+    const filteredDests = query
+      ? TRIP.destinations.filter(d =>
+          d.city.toLowerCase().includes(query) ||
+          d.country.toLowerCase().includes(query) ||
+          d.hotel.name.toLowerCase().includes(query) ||
+          d.id.toLowerCase().includes(query)
+        )
+      : TRIP.destinations;
 
-  const cards = filteredDests.length > 0
-    ? filteredDests.map(d => `
-    <div class="overview-card" onclick="showCity('${d.id}')" style="--city-color:${d.color}">
-      <div class="ov-flag">${d.flag}</div>
-      <div class="ov-city">${d.city}</div>
-      <div class="ov-country">${d.country}</div>
-      <div class="ov-dates">${d.arrival} — ${d.departure}</div>
-      <div class="ov-nights">${d.nights} noches</div>
-      <div class="ov-hotel"><strong>${d.hotel.name}</strong>Check-in ${d.hotel.checkin} · Check-out ${d.hotel.checkout}</div>
-    </div>`).join('')
-    : `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">Sin resultados para "${searchQuery}"</div>`;
+    const cards = filteredDests.length > 0
+      ? filteredDests.map(d => `
+      <div class="overview-card" onclick="showCity('${d.id}')" style="--city-color:${d.color}">
+        <div class="ov-flag">${d.flag}</div>
+        <div class="ov-city">${d.city}</div>
+        <div class="ov-country">${d.country}</div>
+        <div class="ov-dates">${d.arrival} — ${d.departure}</div>
+        <div class="ov-nights">${d.nights} noches</div>
+        <div class="ov-hotel"><strong>${d.hotel.name}</strong>Check-in ${d.hotel.checkin} · Check-out ${d.hotel.checkout}</div>
+      </div>`).join('')
+      : `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">Sin resultados para "${escapeHtml(searchQuery)}"</div>`;
 
-  const allRes = [];
-  TRIP.destinations.forEach(d => {
-    d.reservas.forEach(r => allRes.push({...r, city:d.city, color:d.color}));
-  });
-  allRes.sort((a,b) => {
-    if (a.fechaOrd && b.fechaOrd) return a.fechaOrd - b.fechaOrd;
-    if (a.fechaOrd) return -1;
-    if (b.fechaOrd) return 1;
-    return 0;
-  });
-  const calHtml = allRes.map(r => {
-    const uc = urbClass(r.urgencia);
-    return `<div class="cal-card cal-${uc}">
-      <div class="cal-dot cal-dot-${uc}"></div>
-      <div>
-        <span class="cal-badge cal-badge-${uc}">${r.urgencia.toUpperCase()}</span>
-        <div class="cal-fecha">${r.fecha} — ${r.city}</div>
-        <div class="cal-accion">${r.accion}</div>
-        ${r.url ? `<a class="cal-url" href="https://${r.url}" target="_blank" rel="noopener">${r.url} ↗</a>` : ''}
+    const allRes = [];
+    TRIP.destinations.forEach(d => {
+      d.reservas.forEach(r => allRes.push({...r, city:d.city, color:d.color}));
+    });
+    allRes.sort((a,b) => {
+      if (a.fechaOrd && b.fechaOrd) return a.fechaOrd - b.fechaOrd;
+      if (a.fechaOrd) return -1;
+      if (b.fechaOrd) return 1;
+      return 0;
+    });
+    const calHtml = allRes.map(r => {
+      const uc = urbClass(r.urgencia);
+      return `<div class="cal-card cal-${uc}">
+        <div class="cal-dot cal-dot-${uc}"></div>
+        <div>
+          <span class="cal-badge cal-badge-${uc}">${r.urgencia.toUpperCase()}</span>
+          <div class="cal-fecha">${r.fecha} — ${r.city}</div>
+          <div class="cal-accion">${r.accion}</div>
+          ${r.url ? `<a class="cal-url" href="https://${escapeAttr(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.url)} ↗</a>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+
+    return `
+    <div class="overview active" id="view-overview">
+      <div class="hero" style="padding-top:68px">
+        <div class="hero-eyebrow">Itinerario personal · 4 viajeros</div>
+        <h1 class="hero-title">Europa 2026<br><em>${TRIP.traveler}</em></h1>
+        <div class="hero-meta">
+          <span>📅 ${TRIP.dates}</span>
+          <span>🏙 6 ciudades · 16 noches</span>
+          <span>🛫 YYJ Victoria, BC · Hora base PDT</span>
+        </div>
+        <div class="countdown-bar">
+          <div class="countdown-item"><div class="countdown-num">${months}</div><div class="countdown-label">Meses</div></div>
+          <div class="countdown-item"><div class="countdown-num">${weeks}</div><div class="countdown-label">Semanas</div></div>
+          <div class="countdown-item"><div class="countdown-num">${days}</div><div class="countdown-label">Días Totales</div></div>
+          <div class="countdown-item"><div class="countdown-num">6</div><div class="countdown-label">Ciudades</div></div>
+          <div class="countdown-item"><div class="countdown-num">16</div><div class="countdown-label">Noches</div></div>
+        </div>
+      </div>
+      <div style="max-width:900px;margin:0 auto;padding:0 20px">
+        <div class="search-wrap">
+          <input class="search-input" type="text" placeholder="🔍 Buscar ciudad, país, hotel..." value="${escapeHtml(searchQuery)}" oninput="onSearch(this.value)" id="searchInput">
+        </div>
+        <div class="backup-bar">
+          <button class="backup-btn" onclick="exportBackup()">📥 Exportar datos</button>
+          <button class="backup-btn" onclick="document.getElementById('importFile').click()">📤 Importar datos</button>
+          <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBackup(this)">
+          <span class="kbd-hint" style="margin-left:auto;">⌨ ← → para navegar</span>
+        </div>
+        <div class="overview-grid">${cards}</div>
+        <div class="cal-section-title">🔔 Calendario de Acciones — Ordenado por fecha (Hora Victoria, BC)</div>
+        <div class="global-cal">${calHtml}</div>
       </div>
     </div>`;
-  }).join('');
-
-  return `
-  <div class="overview active" id="view-overview">
-    <div class="hero" style="padding-top:68px">
-      <div class="hero-eyebrow">Itinerario personal · 4 viajeros</div>
-      <h1 class="hero-title">Europa 2026<br><em>${TRIP.traveler}</em></h1>
-      <div class="hero-meta">
-        <span>📅 ${TRIP.dates}</span>
-        <span>🏙 6 ciudades · 16 noches</span>
-        <span>🛫 YYJ Victoria, BC · Hora base PDT</span>
-      </div>
-      <div class="countdown-bar">
-        <div class="countdown-item"><div class="countdown-num">${months}</div><div class="countdown-label">Meses</div></div>
-        <div class="countdown-item"><div class="countdown-num">${weeks}</div><div class="countdown-label">Semanas</div></div>
-        <div class="countdown-item"><div class="countdown-num">${days}</div><div class="countdown-label">Días Totales</div></div>
-        <div class="countdown-item"><div class="countdown-num">6</div><div class="countdown-label">Ciudades</div></div>
-        <div class="countdown-item"><div class="countdown-num">16</div><div class="countdown-label">Noches</div></div>
-      </div>
-    </div>
-    <div style="max-width:900px;margin:0 auto;padding:0 20px">
-      <div class="search-wrap">
-        <input class="search-input" type="text" placeholder="🔍 Buscar ciudad, país, hotel..." value="${escapeHtml(searchQuery)}" oninput="onSearch(this.value)" id="searchInput">
-      </div>
-      <div class="backup-bar">
-        <button class="backup-btn" onclick="exportBackup()">📥 Exportar datos</button>
-        <button class="backup-btn" onclick="document.getElementById('importFile').click()">📤 Importar datos</button>
-        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBackup(this)">
-        <span class="kbd-hint" style="margin-left:auto;">⌨ ← → para navegar</span>
-      </div>
-      <div class="overview-grid">${cards}</div>
-      <div class="cal-section-title">🔔 Calendario de Acciones — Ordenado por fecha (Hora Victoria, BC)</div>
-      <div class="global-cal">${calHtml}</div>
-    </div>
-  </div>`;
-}
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  } catch(e) {
+    console.error(e);
+    return `<div class="error-box"><strong>Error al cargar el resumen:</strong> ${escapeHtml(e.message)}<br><small>Revisa la consola (F12) para más detalles.</small></div>`;
+  }
 }
 
 function onSearch(val) {
@@ -633,143 +634,142 @@ function onSearch(val) {
 
 // ─── RENDER CITY ─────────────────────────────────────────────────────────────
 function renderCity(d) {
-  const idx = TRIP.destinations.findIndex(x => x.id === d.id);
-  const prev = TRIP.destinations[idx-1];
-  const next = TRIP.destinations[idx+1];
+  try {
+    const idx = TRIP.destinations.findIndex(x => x.id === d.id);
+    const prev = TRIP.destinations[idx-1];
+    const next = TRIP.destinations[idx+1];
 
-  // HOTEL con confirmación y tipo precargados
-  const hotelHtml = `
-    <div class="hotel-grid">
-      <div class="hotel-field"><span class="field-label">Hotel</span><span class="field-value">${d.hotel.name}</span></div>
-      <div class="hotel-field"><span class="field-label">Dirección</span><span class="field-value">${d.hotel.address}</span></div>
-      <div class="hotel-field"><span class="field-label">Teléfono</span><span class="field-value"><a href="tel:${d.hotel.phone.replace(/\s/g,'')}">${d.hotel.phone}</a></span></div>
-      <div class="hotel-field"><span class="field-label">Check-in / Check-out</span><span class="field-value">${d.hotel.checkin} → ${d.hotel.checkout}</span></div>
-      <div class="hotel-field"><span class="field-label">Confirmación</span><input class="field-value editable" placeholder="Nº de confirmación" id="conf-${d.id}" value="${escapeHtml(loadField('conf-'+d.id) || d.hotel.confirmation || '')}" onchange="saveField('conf-'+d.id,this.value)"></div>
-      <div class="hotel-field"><span class="field-label">Tipo de habitación</span><input class="field-value editable" placeholder="Tipo de habitación" id="room-${d.id}" value="${escapeHtml(loadField('room-'+d.id) || d.hotel.room || '')}" onchange="saveField('room-'+d.id,this.value)"></div>
-    </div>
-    ${d.hotel.notes ? `<div class="hotel-note">💡 ${d.hotel.notes}</div>` : ''}`;
-
-  // FLIGHTS con datos precargados
-  const flightsHtml = d.flights.map((f,i) => {
-    const fnKey = 'fl-num-'+d.id+'-'+i;
-    const ftKey = 'fl-time-'+d.id+'-'+i;
-    const fcKey = 'fl-conf-'+d.id+'-'+i;
-    const flightNumSaved = loadField(fnKey);
-    const flightTimeSaved = loadField(ftKey);
-    const flightConfSaved = loadField(fcKey);
-
-    const flightNumber = flightNumSaved || f.flightNumber || '';
-    const flightTime = flightTimeSaved || (f.departureTime ? f.departureTime + ' → ' + f.arrivalTime : '');
-    const flightConf = flightConfSaved || f.conf || '';
-
-    let noteHtml = '';
-    if (f.note) {
-      noteHtml = `<div class="flight-note">📌 ${f.note}</div>`;
-    }
-
-    return `
-    <div class="flight-card">
-      <span class="flight-type" style="background:${d.color}">${f.type}</span>
-      <div class="flight-route">
-        <div class="flight-from-to">${f.from} <span class="flight-arrow">→</span> ${f.to}</div>
-        <div class="flight-date">${f.date}</div>
-        ${noteHtml}
+    // HOTEL
+    const hotelHtml = `
+      <div class="hotel-grid">
+        <div class="hotel-field"><span class="field-label">Hotel</span><span class="field-value">${d.hotel.name}</span></div>
+        <div class="hotel-field"><span class="field-label">Dirección</span><span class="field-value">${d.hotel.address}</span></div>
+        <div class="hotel-field"><span class="field-label">Teléfono</span><span class="field-value"><a href="tel:${d.hotel.phone.replace(/\s/g,'')}">${d.hotel.phone}</a></span></div>
+        <div class="hotel-field"><span class="field-label">Check-in / Check-out</span><span class="field-value">${d.hotel.checkin} → ${d.hotel.checkout}</span></div>
+        <div class="hotel-field"><span class="field-label">Confirmación</span><input class="field-value editable" placeholder="Nº de confirmación" id="conf-${d.id}" value="${escapeHtml(loadField('conf-'+d.id) || d.hotel.confirmation || '')}" onchange="saveField('conf-'+d.id,this.value)"></div>
+        <div class="hotel-field"><span class="field-label">Tipo de habitación</span><input class="field-value editable" placeholder="Tipo de habitación" id="room-${d.id}" value="${escapeHtml(loadField('room-'+d.id) || d.hotel.room || '')}" onchange="saveField('room-'+d.id,this.value)"></div>
       </div>
-      <div class="flight-fields">
-        <input class="flight-input" placeholder="# Vuelo" id="${fnKey}" value="${escapeHtml(flightNumber)}" onchange="saveField('${fnKey}',this.value)">
-        <input class="flight-input" placeholder="Hora" id="${ftKey}" value="${escapeHtml(flightTime)}" onchange="saveField('${ftKey}',this.value)">
-        <input class="flight-input" placeholder="Confirmación" id="${fcKey}" value="${escapeHtml(flightConf)}" onchange="saveField('${fcKey}',this.value)">
-      </div>
-    </div>`;
-  }).join('');
+      ${d.hotel.notes ? `<div class="hotel-note">💡 ${d.hotel.notes}</div>` : ''}`;
 
-  // MUST DO
-  const mustDoHtml = d.mustdo.map(a => {
-    const uc = urbClass(a.urgencia||'walk');
-    const rbClass = `rb-${uc}`;
-    const reservaInfo = a.urgencia !== 'walk' ? `
-      <div class="reserva-block ${rbClass}">
-        <div class="rb-label">⏰ Reservar desde Victoria: ${a.cuando_victoria}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:1px">${a.nota}</div>
-        ${a.url ? `<a href="https://${a.url}" target="_blank" rel="noopener" style="color:var(--gold);font-size:10px">${a.url} ↗</a>` : ''}
-      </div>` : `<div style="font-size:11px;color:var(--muted);margin-top:5px">${a.nota}</div>`;
-    return `
-    <div class="activity-card">
-      <div class="activity-icon">${a.tipo.includes('Museo')?'🏛':a.tipo.includes('Gastro')||a.tipo.includes('Cafe')||a.tipo.includes('mercado')||a.tipo.includes('Mercado')?'🍽':a.tipo.includes('Historia')||a.tipo.includes('Cultura')?'🏛':a.tipo.includes('Barrio')||a.tipo.includes('Paseo')?'🚶':'📍'}</div>
-      <div>
-        <div class="activity-name">${a.name}</div>
-        <div class="activity-meta">
-          ${urgBadge(a.urgencia||'walk')}
-          <span class="tag tag-cost">${a.cost}</span>
-          <span class="tag tag-cost">${a.tipo}</span>
+    // FLIGHTS
+    const flightsHtml = d.flights.map((f,i) => {
+      const fnKey = 'fl-num-'+d.id+'-'+i;
+      const ftKey = 'fl-time-'+d.id+'-'+i;
+      const fcKey = 'fl-conf-'+d.id+'-'+i;
+      const flightNumSaved = loadField(fnKey);
+      const flightTimeSaved = loadField(ftKey);
+      const flightConfSaved = loadField(fcKey);
+      const flightNumber = flightNumSaved || f.flightNumber || '';
+      const flightTime = flightTimeSaved || (f.departureTime ? f.departureTime + ' → ' + f.arrivalTime : '');
+      const flightConf = flightConfSaved || f.conf || '';
+      const noteHtml = f.note ? `<div class="flight-note">📌 ${f.note}</div>` : '';
+      return `
+      <div class="flight-card">
+        <span class="flight-type" style="background:${d.color}">${f.type}</span>
+        <div class="flight-route">
+          <div class="flight-from-to">${f.from} <span class="flight-arrow">→</span> ${f.to}</div>
+          <div class="flight-date">${f.date}</div>
+          ${noteHtml}
         </div>
-        ${reservaInfo}
+        <div class="flight-fields">
+          <input class="flight-input" placeholder="# Vuelo" id="${fnKey}" value="${escapeHtml(flightNumber)}" onchange="saveField('${fnKey}',this.value)">
+          <input class="flight-input" placeholder="Hora" id="${ftKey}" value="${escapeHtml(flightTime)}" onchange="saveField('${ftKey}',this.value)">
+          <input class="flight-input" placeholder="Confirmación" id="${fcKey}" value="${escapeHtml(flightConf)}" onchange="saveField('${fcKey}',this.value)">
+        </div>
+      </div>`;
+    }).join('');
+
+    // MUST DO
+    const mustDoHtml = d.mustdo.map(a => {
+      const uc = urbClass(a.urgencia||'walk');
+      const rbClass = `rb-${uc}`;
+      const reservaInfo = a.urgencia !== 'walk' ? `
+        <div class="reserva-block ${rbClass}">
+          <div class="rb-label">⏰ Reservar desde Victoria: ${a.cuando_victoria}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${a.nota}</div>
+          ${a.url ? `<a href="https://${escapeAttr(a.url)}" target="_blank" rel="noopener" style="color:var(--gold);font-size:10px">${escapeHtml(a.url)} ↗</a>` : ''}
+        </div>` : `<div style="font-size:11px;color:var(--muted);margin-top:5px">${a.nota}</div>`;
+      return `
+      <div class="activity-card">
+        <div class="activity-icon">${a.tipo.includes('Museo')?'🏛':a.tipo.includes('Gastro')||a.tipo.includes('Cafe')||a.tipo.includes('mercado')||a.tipo.includes('Mercado')?'🍽':a.tipo.includes('Historia')||a.tipo.includes('Cultura')?'🏛':a.tipo.includes('Barrio')||a.tipo.includes('Paseo')?'🚶':'📍'}</div>
+        <div>
+          <div class="activity-name">${a.name}</div>
+          <div class="activity-meta">
+            ${urgBadge(a.urgencia||'walk')}
+            <span class="tag tag-cost">${a.cost}</span>
+            <span class="tag tag-cost">${a.tipo}</span>
+          </div>
+          ${reservaInfo}
+        </div>
+        <div class="activity-link">${a.url ? `<a href="https://${escapeAttr(a.url)}" target="_blank" rel="noopener">↗</a>` : ''}</div>
+      </div>`;
+    }).join('');
+
+    // RESTAURANTS
+    const restosHtml = d.restaurants.map(r => `
+      <div class="resto-card">
+        <div>
+          <div class="resto-name">${r.name}</div>
+          <div class="resto-tipo">${r.tipo}</div>
+          <div class="resto-pedir">Pedir: <strong>${r.pedir}</strong></div>
+          <div class="resto-cuando" style="color:var(--muted);font-size:10px">⏰ ${r.cuando}</div>
+        </div>
+        <div class="resto-right">
+          <div class="resto-precio">${r.precio}</div>
+          <div><span class="resto-reserva-badge ${r.badge}">${r.reserva}</span></div>
+        </div>
+      </div>`).join('');
+
+    // CALENDARIO RESERVAS
+    const reservasSorted = [...d.reservas].sort((a,b) => {
+      if (a.fechaOrd && b.fechaOrd) return a.fechaOrd - b.fechaOrd;
+      if (a.fechaOrd) return -1;
+      if (b.fechaOrd) return 1;
+      return 0;
+    });
+    const calHtml = reservasSorted.map(r => {
+      const uc = urbClass(r.urgencia);
+      return `<div class="cal-card cal-${uc}">
+        <div class="cal-dot cal-dot-${uc}"></div>
+        <div>
+          <span class="cal-badge cal-badge-${uc}">${r.urgencia.toUpperCase()}</span>
+          <div class="cal-fecha">${r.fecha}</div>
+          <div class="cal-accion">${r.accion}</div>
+          ${r.url ? `<a class="cal-url" href="https://${escapeAttr(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.url)} ↗</a>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+
+    const prevBtn = prev ? `<button class="nav-btn" onclick="showCity('${prev.id}')">← ${prev.city}</button>` : `<button class="nav-btn" onclick="showOverview()">← Resumen</button>`;
+    const nextBtn = next ? `<button class="nav-btn next" onclick="showCity('${next.id}')">${next.city} →</button>` : `<button class="nav-btn" onclick="showOverview()" style="background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:600">Volver al resumen</button>`;
+
+    return `
+    <div class="destination" id="dest-${d.id}" style="--city-color:${d.color}">
+      <div class="city-header">
+        <div>
+          <div class="city-title">${d.flag} ${d.city}</div>
+          <div class="city-dates">${d.country} · ${d.arrival} — ${d.departure} · ${d.nights} noches</div>
+        </div>
+        <div>
+          <div class="city-badge" style="background:${d.color}">${d.hotel.name.split(' ').slice(0,3).join(' ')}</div>
+          <div class="nav-btns" style="margin-top:6px">${prevBtn}${nextBtn}</div>
+        </div>
       </div>
-      <div class="activity-link">${a.url ? `<a href="https://${a.url}" target="_blank" rel="noopener">↗</a>` : ''}</div>
+      ${section('hotel-'+d.id,'🏨','Hotel & Alojamiento', hotelHtml, true)}
+      ${section('flights-'+d.id,'✈️','Vuelos / Transporte', flightsHtml, false)}
+      ${section('reservas-'+d.id,'🔔','Reservas & Calendario — Hora Victoria, BC', calHtml, true)}
+      ${section('mustdo-'+d.id,'📍','Actividades & Atracciones Imperdibles', mustDoHtml, true)}
+      ${section('restos-'+d.id,'🍽','Restaurantes & Cafés', restosHtml, false)}
+      <div class="footer-nav">
+        ${prevBtn}
+        <span class="footer-progress">${idx+1} / ${TRIP.destinations.length}</span>
+        ${nextBtn}
+      </div>
     </div>`;
-  }).join('');
-
-  // RESTAURANTS
-  const restosHtml = d.restaurants.map(r => `
-    <div class="resto-card">
-      <div>
-        <div class="resto-name">${r.name}</div>
-        <div class="resto-tipo">${r.tipo}</div>
-        <div class="resto-pedir">Pedir: <strong>${r.pedir}</strong></div>
-        <div class="resto-cuando" style="color:var(--muted);font-size:10px">⏰ ${r.cuando}</div>
-      </div>
-      <div class="resto-right">
-        <div class="resto-precio">${r.precio}</div>
-        <div><span class="resto-reserva-badge ${r.badge}">${r.reserva}</span></div>
-      </div>
-    </div>`).join('');
-
-  // RESERVAS CALENDARIO
-  const reservasSorted = [...d.reservas].sort((a,b) => {
-    if (a.fechaOrd && b.fechaOrd) return a.fechaOrd - b.fechaOrd;
-    if (a.fechaOrd) return -1;
-    if (b.fechaOrd) return 1;
-    return 0;
-  });
-  const calHtml = reservasSorted.map(r => {
-    const uc = urbClass(r.urgencia);
-    return `<div class="cal-card cal-${uc}">
-      <div class="cal-dot cal-dot-${uc}"></div>
-      <div>
-        <span class="cal-badge cal-badge-${uc}">${r.urgencia.toUpperCase()}</span>
-        <div class="cal-fecha">${r.fecha}</div>
-        <div class="cal-accion">${r.accion}</div>
-        ${r.url ? `<a class="cal-url" href="https://${r.url}" target="_blank" rel="noopener">${r.url} ↗</a>` : ''}
-      </div>
-    </div>`;
-  }).join('');
-
-  const prevBtn = prev ? `<button class="nav-btn" onclick="showCity('${prev.id}')">← ${prev.city}</button>` : `<button class="nav-btn" onclick="showOverview()">← Resumen</button>`;
-  const nextBtn = next ? `<button class="nav-btn next" onclick="showCity('${next.id}')">${next.city} →</button>` : `<button class="nav-btn" onclick="showOverview()" style="background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:600">Volver al resumen</button>`;
-
-  return `
-  <div class="destination" id="dest-${d.id}" style="--city-color:${d.color}">
-    <div class="city-header">
-      <div>
-        <div class="city-title">${d.flag} ${d.city}</div>
-        <div class="city-dates">${d.country} · ${d.arrival} — ${d.departure} · ${d.nights} noches</div>
-      </div>
-      <div>
-        <div class="city-badge" style="background:${d.color}">${d.hotel.name.split(' ').slice(0,3).join(' ')}</div>
-        <div class="nav-btns" style="margin-top:6px">${prevBtn}${nextBtn}</div>
-      </div>
-    </div>
-    ${section('hotel-'+d.id,'🏨','Hotel & Alojamiento', hotelHtml, true)}
-    ${section('flights-'+d.id,'✈️','Vuelos / Transporte', flightsHtml, false)}
-    ${section('reservas-'+d.id,'🔔','Reservas & Calendario — Hora Victoria, BC', calHtml, true)}
-    ${section('mustdo-'+d.id,'📍','Actividades & Atracciones Imperdibles', mustDoHtml, true)}
-    ${section('restos-'+d.id,'🍽','Restaurantes & Cafés', restosHtml, false)}
-    <div class="footer-nav">
-      ${prevBtn}
-      <span class="footer-progress">${idx+1} / ${TRIP.destinations.length}</span>
-      ${nextBtn}
-    </div>
-  </div>`;
+  } catch(e) {
+    console.error(e);
+    return `<div class="error-box"><strong>Error al cargar ${d.city}:</strong> ${escapeHtml(e.message)}<br><small>Revisa la consola (F12) para más detalles.</small></div>`;
+  }
 }
 
 // ─── LOCAL STORAGE & TOAST ───────────────────────────────────────────────────
@@ -778,7 +778,6 @@ function saveField(key, val) {
     localStorage.setItem('eu26_'+key, val);
     showToast('Guardado ✓');
   } catch(e) {
-    console.error("Error guardando en localStorage", e);
     showToast('Error al guardar');
   }
 }
@@ -793,129 +792,93 @@ function showToast(msg) {
   toast.textContent = msg;
   toast.classList.add('show');
   clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => {
-    toast.classList.remove('show');
-  }, 1800);
+  toastTimeout = setTimeout(() => toast.classList.remove('show'), 1800);
 }
 
-// ─── BACKUP / EXPORT / IMPORT ────────────────────────────────────────────────
+// ─── BACKUP ──────────────────────────────────────────────────────────────────
 function exportBackup() {
   const data = {};
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key.startsWith('eu26_')) {
-      data[key] = localStorage.getItem(key);
-    }
+    if (key.startsWith('eu26_')) data[key] = localStorage.getItem(key);
   }
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = 'europa2026_backup_' + new Date().toISOString().slice(0,10) + '.json';
-  a.click();
-  URL.revokeObjectURL(url);
+  a.href = url; a.download = 'europa2026_backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click(); URL.revokeObjectURL(url);
   showToast('Backup descargado ✓');
 }
-
 function importBackup(input) {
-  const file = input.files[0];
-  if (!file) return;
+  const file = input.files[0]; if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result);
       let count = 0;
-      for (const [key, val] of Object.entries(data)) {
-        if (key.startsWith('eu26_')) {
-          localStorage.setItem(key, val);
-          count++;
-        }
+      for (const [k, v] of Object.entries(data)) {
+        if (k.startsWith('eu26_')) { localStorage.setItem(k, v); count++; }
       }
       showToast(`Importados ${count} campos ✓`);
-      renderApp();
-      if (currentView === 'overview') updateNav();
-    } catch(err) {
-      showToast('Error: archivo inválido');
-      console.error(err);
-    }
+      renderApp(); updateNav();
+    } catch(err) { showToast('Error: archivo inválido'); }
   };
-  reader.readAsText(file);
-  input.value = '';
+  reader.readAsText(file); input.value = '';
 }
 
-// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+// ─── NAVIGATION ─────────────────────────────────────────────────────────────
 function showOverview() {
-  currentView = "overview";
-  currentCityId = null;
-  searchQuery = "";
-  document.documentElement.style.setProperty('--city-color', '#c9a84c');
-  renderApp();
-  updateNav();
-  window.scrollTo(0,0);
+  currentView = "overview"; currentCityId = null; searchQuery = "";
+  document.documentElement.style.setProperty('--city-color','#c9a84c');
+  renderApp(); updateNav(); window.scrollTo(0,0);
 }
 
 function showCity(id) {
-  currentView = "city";
-  currentCityId = id;
+  currentView = "city"; currentCityId = id;
   const d = TRIP.destinations.find(x => x.id === id);
-  if (d) {
-    document.documentElement.style.setProperty('--city-color', d.color);
-  }
+  if (d) document.documentElement.style.setProperty('--city-color', d.color);
   searchQuery = "";
-  renderApp();
-  updateNav();
-  window.scrollTo(0,0);
+  renderApp(); updateNav(); window.scrollTo(0,0);
 }
 
 function updateNav() {
-  document.querySelectorAll('.nav-city').forEach(btn => {
-    btn.classList.remove('active');
+  document.querySelectorAll('.nav-city').forEach((b,i) => {
+    b.classList.remove('active');
+    if (currentView === 'overview' && i === 0) b.classList.add('active');
+    else if (currentView === 'city' && TRIP.destinations[i-1]?.id === currentCityId) b.classList.add('active');
   });
-  if (currentView === 'overview') {
-    document.querySelectorAll('.nav-city')[0].classList.add('active');
-  } else {
-    const idx = TRIP.destinations.findIndex(x => x.id === currentCityId);
-    if (idx >= 0) document.querySelectorAll('.nav-city')[idx+1].classList.add('active');
-  }
 }
 
 function renderApp() {
   const app = document.getElementById('app');
-  if (currentView === 'overview') {
-    app.innerHTML = renderOverview();
-  } else {
-    const d = TRIP.destinations.find(x => x.id === currentCityId);
-    if (d) app.innerHTML = `<div style="padding-top:52px">${renderCity(d)}</div>`;
+  try {
+    if (currentView === 'overview') app.innerHTML = renderOverview();
+    else {
+      const d = TRIP.destinations.find(x => x.id === currentCityId);
+      app.innerHTML = d ? `<div style="padding-top:52px">${renderCity(d)}</div>` : `<div class="error-box">Ciudad no encontrada: ${currentCityId}</div>`;
+    }
+  } catch(e) {
+    app.innerHTML = `<div class="error-box">Error inesperado: ${escapeHtml(e.message)}</div>`;
   }
 }
 
-// ─── KEYBOARD NAVIGATION ─────────────────────────────────────────────────────
-document.addEventListener('keydown', function(e) {
+// ─── KEYBOARD ────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
   if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
     e.preventDefault();
     if (currentView === 'overview') {
-      if (e.key === 'ArrowRight' && TRIP.destinations.length > 0) {
-        showCity(TRIP.destinations[0].id);
-      }
+      if (e.key === 'ArrowRight' && TRIP.destinations.length) showCity(TRIP.destinations[0].id);
     } else {
       const idx = TRIP.destinations.findIndex(x => x.id === currentCityId);
-      if (e.key === 'ArrowLeft') {
-        if (idx > 0) showCity(TRIP.destinations[idx-1].id);
-        else showOverview();
-      } else {
-        if (idx < TRIP.destinations.length - 1) showCity(TRIP.destinations[idx+1].id);
-        else showOverview();
-      }
+      if (e.key === 'ArrowLeft') idx > 0 ? showCity(TRIP.destinations[idx-1].id) : showOverview();
+      else idx < TRIP.destinations.length-1 ? showCity(TRIP.destinations[idx+1].id) : showOverview();
     }
   }
-  if (e.key === 'Escape') {
-    showOverview();
-  }
+  if (e.key === 'Escape') showOverview();
 });
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
+// ─── START ───────────────────────────────────────────────────────────────────
 showOverview();
 </script>
 
