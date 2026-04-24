@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Europa 2026 — Jose, Heberth, Pepe y Warren</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0e0d;
+  --surface: #1a1917;
+  --surface2: #242220;
+  --border: #2e2c29;
+  --text: #f0ede8;
+  --muted: #8a847a;
+  --gold: #c9a84c;
+  --gold-lt: #f5e6c8;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --city-color: #c9a84c;
+  --city-accent: #f5e6c8;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  padding-bottom: var(--safe-bottom);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── NAV ── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(15,14,13,0.94); backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px; height: 52px;
+  display: flex; align-items: center; gap: 6px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.nav::-webkit-scrollbar { display: none; }
+.nav-city {
+  flex-shrink: 0; padding: 6px 13px; border-radius: 999px;
+  font-size: 11px; font-weight: 500; border: 1px solid var(--border);
+  background: transparent; color: var(--muted); cursor: pointer;
+  transition: all .2s; white-space: nowrap; font-family: 'DM Sans', sans-serif;
+  letter-spacing: 0.01em;
+}
+.nav-city.active { background: var(--city-color); color: #1a1917; border-color: var(--city-color); font-weight: 600; }
+.nav-city:hover:not(.active) { border-color: var(--muted); color: var(--text); }
+.nav-brand {
+  font-family: 'Playfair Display', serif; font-size: 13px;
+  color: var(--gold); white-space: nowrap; margin-right: 6px; flex-shrink: 0;
+  cursor: pointer; user-select: none;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; top: 64px; left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: var(--gold); color: var(--bg);
+  padding: 7px 16px; border-radius: 999px;
+  font-size: 11px; font-weight: 600;
+  opacity: 0; pointer-events: none;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1000; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── HERO ── */
+.hero { padding: 72px 20px 24px; max-width: 900px; margin: 0 auto; }
+.hero-eyebrow { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+.hero-title { font-family: 'Playfair Display', serif; font-size: clamp(28px, 6vw, 52px); line-height: 1.12; margin-bottom: 14px; }
+.hero-title em { color: var(--gold); font-style: italic; }
+.hero-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.hero-meta span { display: flex; align-items: center; gap: 5px; }
+
+/* ── CITY TABS ── */
+.city-strip { max-width: 900px; margin: 0 auto; padding: 0 20px 20px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.city-strip::-webkit-scrollbar { display: none; }
+.city-pill {
+  flex-shrink: 0; display: flex; align-items: center; gap: 7px;
+  padding: 9px 16px; border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; transition: all .2s;
+  font-size: 12px; font-weight: 500; color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+}
+.city-pill.active { border-color: var(--city-color); background: var(--surface2); color: var(--text); }
+.city-pill .flag { font-size: 16px; }
+.city-pill .nights { font-size: 10px; color: var(--muted); font-weight: 400; }
+.city-pill.active .nights { color: var(--city-color); }
+
+/* ── SEARCH ── */
+.search-wrap { max-width: 900px; margin: 0 auto; padding: 0 20px 16px; }
+.search-input {
+  width: 100%; padding: 10px 16px; border-radius: var(--radius-sm);
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif;
+  outline: none; transition: border-color .2s;
+}
+.search-input:focus { border-color: var(--gold); }
+.search-input::placeholder { color: var(--muted); }
+
+/* ── DESTINATION ── */
+.destination { display: none; max-width: 900px; margin: 0 auto; padding: 0 20px 60px; }
+.destination.active { display: block; }
+
+.city-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 10px; }
+.city-title { font-family: 'Playfair Display', serif; font-size: 34px; display: flex; align-items: center; gap: 10px; }
+.city-dates { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.city-badge { padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--city-color); color: var(--bg); display: inline-block; }
+.nav-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.nav-btn {
+  padding: 7px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted); cursor: pointer;
+  font-size: 11px; font-weight: 500; transition: all .2s;
+  font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 4px;
+}
+.nav-btn:hover { border-color: var(--city-color); color: var(--text); }
+.nav-btn.next { background: var(--city-color); border-color: var(--city-color); color: var(--bg); font-weight: 600; }
+.nav-btn.next:hover { opacity: .85; }
+
+/* ── SECTIONS ── */
+.section { margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.section-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--surface); cursor: pointer; user-select: none; transition: background .15s; }
+.section-header:hover { background: var(--surface2); }
+.section-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; display: flex; align-items: center; gap: 9px; }
+.section-icon { font-size: 15px; }
+.section-toggle { font-size: 16px; color: var(--muted); transition: transform .22s ease; }
+.section-body { padding: 18px; background: var(--bg); display: none; border-top: 1px solid var(--border); }
+.section-body.open { display: block; }
+.section.open .section-toggle { transform: rotate(180deg); }
+
+/* ── HOTEL CARD ── */
+.hotel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 600px) { .hotel-grid { grid-template-columns: 1fr; } }
+.hotel-field { display: flex; flex-direction: column; gap: 3px; }
+.field-label { font-size: 9px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+.field-value { font-size: 13px; color: var(--text); }
+.field-value a { color: var(--gold); text-decoration: none; }
+.field-value a:hover { text-decoration: underline; }
+.field-value.editable {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 10px; outline: none;
+  color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif;
+  width: 100%; transition: border-color 0.2s;
+}
+.field-value.editable:focus { border-color: var(--city-color); }
+.field-value.editable::placeholder { color: #555; font-size: 11px; }
+.hotel-note { margin-top: 14px; padding: 11px; background: var(--surface); border-radius: var(--radius-sm); font-size: 11px; color: var(--muted); border-left: 3px solid var(--city-color); }
+
+/* ── FLIGHTS ── */
+.flight-card { display: flex; align-items: center; gap: 14px; padding: 12px; background: var(--surface); border-radius: var(--radius-sm); margin-bottom: 9px; flex-wrap: wrap; }
+.flight-type { font-size: 9px; text-transform: uppercase; letter-spacing: .1em; padding: 3px 8px; border-radius: 999px; color: var(--bg); font-weight: 600; flex-shrink: 0; }
+.flight-route { flex: 1; min-width: 140px; }
+.flight-from-to { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 7px; }
+.flight-arrow { color: var(--city-color); }
+.flight-date { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.flight-fields { display: flex; gap: 8px; flex-wrap: wrap; }
+.flight-input {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 5px; padding: 5px 8px; color: var(--text);
+  font-size: 11px; font-family: 'DM Sans', sans-serif;
+  outline: none; width: 110px; transition: border-color 0.2s;
+}
+.flight-input:focus { border-color: var(--city-color); }
+.flight-input::placeholder { color: #555; }
+.flight-note { font-size: 10px; color: var(--muted); margin-top: 4px; flex-basis: 100%; }
+
+/* ── ACTIVITIES ── */
+.activity-card { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; padding: 12px; background: var(--surface); border-radius: var(--radius-sm); margin-bottom: 9px; }
+.activity-icon { font-size: 20px; padding-top: 1px; }
+.activity-name { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.activity-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.tag { font-size: 9px; padding: 2px 7px; border-radius: 999px; font-weight: 500; }
+.tag-reserva-si { background: #FAE0E0; color: #8B1A1A; }
+.tag-reserva-no { background: #D6F0DC; color: #1E6B2E; }
+.tag-reserva-rec { background: #FFF0CC; color: #7A5000; }
+.tag-cost { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+.activity-link a { font-size: 13px; color: var(--gold); text-decoration: none; white-space: nowrap; }
+.activity-link a:hover { text-decoration: underline; }
+.reserva-block { margin-top: 9px; padding: 10px; background: var(--bg); border-radius: 6px; border-left: 2px solid; font-size: 11px; }
+.rb-critica { border-color: #c62828; }
+.rb-alta { border-color: #C9A84C; }
+.rb-media { border-color: #2E7D32; }
+.rb-walk { border-color: #555; }
+.rb-label { font-weight: 600; font-size: 9px; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 2px; }
+.rb-critica .rb-label { color: #e57373; }
+.rb-alta .rb-label { color: var(--gold); }
+.rb-media .rb-label { color: #81c784; }
+.rb-walk .rb-label { color: var(--muted); }
+
+/* ── RESTAURANTS ── */
+.resto-card { padding: 12px; background: var(--surface); border-radius: var(--radius-sm); margin-bottom: 9px; display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.resto-name { font-size: 13px; font-weight: 600; margin-bottom: 1px; }
+.resto-tipo { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.resto-pedir { font-size: 11px; color: var(--text); margin-bottom: 4px; }
+.resto-pedir strong { color: var(--gold); }
+.resto-right { text-align: right; flex-shrink: 0; }
+.resto-precio { font-size: 12px; font-weight: 600; color: var(--text); }
+.resto-reserva-badge { display: inline-block; margin-top: 4px; font-size: 9px; padding: 2px 7px; border-radius: 999px; font-weight: 600; }
+.rsb-si { background: #FAE0E0; color: #8B1A1A; }
+.rsb-walk { background: #D6F0DC; color: #1E6B2E; }
+.rsb-rec { background: #FFF0CC; color: #7A5000; }
+.resto-cuando { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+/* ── RESERVAS CALENDARIO ── */
+.cal-card { display: flex; gap: 10px; align-items: flex-start; padding: 11px; background: var(--surface); border-radius: var(--radius-sm); margin-bottom: 7px; border-left: 3px solid; }
+.cal-critica { border-color: #c62828; }
+.cal-alta { border-color: #C9A84C; }
+.cal-media { border-color: #2E7D32; }
+.cal-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.cal-dot-critica { background: #c62828; }
+.cal-dot-alta { background: #C9A84C; }
+.cal-dot-media { background: #2E7D32; }
+.cal-fecha { font-size: 11px; font-weight: 700; color: var(--gold); margin-bottom: 2px; }
+.cal-accion { font-size: 12px; color: var(--text); margin-bottom: 3px; }
+.cal-url { font-size: 10px; color: var(--gold); text-decoration: none; }
+.cal-url:hover { text-decoration: underline; }
+.cal-badge { display: inline-block; font-size: 9px; padding: 1px 6px; border-radius: 999px; font-weight: 600; margin-bottom: 3px; }
+.cal-badge-critica { background: #FAE0E0; color: #8B1A1A; }
+.cal-badge-alta { background: #FFF0CC; color: #7A5000; }
+.cal-badge-media { background: #D6F0DC; color: #1E6B2E; }
+
+/* ── BACKUP BTN ── */
+.backup-bar { max-width: 900px; margin: 0 auto; padding: 0 20px 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.backup-btn {
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted); cursor: pointer;
+  font-size: 10px; font-family: 'DM Sans', sans-serif;
+  transition: all .2s; display: flex; align-items: center; gap: 4px;
+}
+.backup-btn:hover { border-color: var(--gold); color: var(--text); }
+
+/* ── FOOTER NAV ── */
+.footer-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+.footer-progress { font-size: 11px; color: var(--muted); }
+
+/* ── OVERVIEW ── */
+.overview { display: none; max-width: 900px; margin: 0 auto; padding: 0 20px 60px; }
+.overview.active { display: block; }
+.overview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-top: 6px; }
+.overview-card {
+  padding: 18px; background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border); cursor: pointer; transition: all .2s;
+  position: relative; overflow: hidden;
+}
+.overview-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--city-color); }
+.overview-card:hover { border-color: var(--city-color); transform: translateY(-2px); }
+.ov-flag { font-size: 26px; margin-bottom: 6px; }
+.ov-city { font-family: 'Playfair Display', serif; font-size: 20px; margin-bottom: 3px; }
+.ov-country { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+.ov-dates { font-size: 11px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.ov-nights { font-size: 10px; color: var(--muted); }
+.ov-hotel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+.ov-hotel strong { color: var(--text); display: block; margin-bottom: 1px; font-size: 12px; }
+.cal-section-title { font-size: 13px; font-weight: 600; color: var(--text); margin: 20px 0 10px; display: flex; align-items: center; gap: 7px; }
+
+/* ── COUNTDOWN ── */
+.countdown-bar { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+.countdown-item { flex: 1; min-width: 70px; padding: 14px; background: var(--surface); border-radius: var(--radius); text-align: center; border: 1px solid var(--border); }
+.countdown-num { font-family: 'Playfair Display', serif; font-size: 30px; color: var(--gold); line-height: 1; }
+.countdown-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 3px; }
+
+/* ── KEYBOARD HINT ── */
+.kbd-hint { font-size: 10px; color: var(--muted); text-align: center; padding: 6px; opacity: 0.7; }
+
+/* Scrollbar desktop */
+@media (min-width: 700px) {
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+}
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast">Guardado ✓</div>
+
+<nav class="nav">
+  <span class="nav-brand" onclick="showOverview()" title="Ir al resumen">Europa 2026</span>
+  <button class="nav-city active" onclick="showOverview()">🏠 Resumen</button>
+  <button class="nav-city" onclick="showCity('roma')">🇮🇹 Roma</button>
+  <button class="nav-city" onclick="showCity('madrid')">🇪🇸 Madrid</button>
+  <button class="nav-city" onclick="showCity('praga')">🇨🇿 Praga</button>
+  <button class="nav-city" onclick="showCity('viena')">🇦🇹 Viena</button>
+  <button class="nav-city" onclick="showCity('berlin')">🇩🇪 Berlin</button>
+  <button class="nav-city" onclick="showCity('paris')">🇫🇷 Paris</button>
+</nav>
+
+<div id="app"></div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const TRIP = {
+  traveler: "Jose, Heberth, Pepe y Warren",
+  dates: "21 Ago — 7 Sep 2026",
+  // Salida el 21 de agosto (YYJ)
+  departure: new Date(2026, 7, 21),
+  destinations: [
+    {
+      id:"roma", city:"Roma", country:"Italia", flag:"🇮🇹",
+      arrival:"22 Ago 2026", departure:"25 Ago 2026", nights:3,
+      color:"#4CAF50", accent:"#C8E6C9",
+      hotel:{ name:"Hilton Garden Inn Rome Colosseum", address:"Via Labicana 144, 00184 Roma", phone:"+39 06 7720 4700", checkin:"22 Ago", checkout:"25 Ago", confirmation:"3392434721", room:"King Room (2)", notes:"A pasos del Coliseo. Ambiente privilegiado para visitar el centro historico a pie." },
+      flights:[
+        {type:"Llegada", from:"Victoria YYJ", to:"Calgary YYC", date:"21 Ago 2026", flightNumber:"WS 272", departureTime:"13:05", arrivalTime:"15:35", conf:"Confirmed"},
+        {type:"Llegada", from:"Calgary YYC", to:"Roma FCO", date:"21 Ago 2026", flightNumber:"WS 24", departureTime:"19:00", arrivalTime:"12:55 (+1 día)", conf:"Confirmed", note:"Terminal 3"},
+        {type:"Salida", from:"Roma FCO", to:"Madrid MAD", date:"25 Ago 2026"}
+      ],
+      mustdo:[
+        {name:"Coliseo + Foro Romano + Palatino",tipo:"Atraccion historica",cost:"18-35 EUR",reserva:"SI",urgencia:"critica",cuando_victoria:"22 Jul — 11:45pm Victoria",url:"ticketing.colosseo.it",nota:"Los tickets Underground se liberan a las 8:45am hora Roma = 11:45pm hora Victoria del 22 Jul. Se agotan en minutos. Pon alarma."},
+        {name:"Vaticano + Capilla Sixtina",tipo:"Museo / Religion",cost:"17-35 EUR",reserva:"SI",urgencia:"alta",cuando_victoria:"Agosto — con 2 semanas de antelacion",url:"museivaticani.va",nota:"Sin reserva la cola puede ser de 2-3 horas en agosto."},
+        {name:"Pantheon",tipo:"Atraccion historica",cost:"5 EUR",reserva:"Recomendada",urgencia:"media",cuando_victoria:"Comprar online antes del viaje",url:"pantheonroma.com",nota:"Ahora cobra entrada. Reserva franja horaria online para evitar cola."},
+        {name:"Fontana di Trevi",tipo:"Icono / Paseo",cost:"Gratis",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"Ve a las 7am sin multitudes",url:"",nota:"Gratis pero muy concurrida en verano. El madrugon vale la pena."},
+        {name:"Passeggiata por Trastevere",tipo:"Barrio / Experiencia",cost:"Gratis",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"Tarde / noche",url:"",nota:"El barrio mas romano de Roma. Mejor al atardecer."}
+      ],
+      restaurants:[
+        {name:"Felice a Testaccio",tipo:"Trattoria clasica romana",precio:"25-35 EUR",pedir:"Cacio e Pepe hecha a mano + Amatriciana",reserva:"SI",badge:"rsb-si",cuando:"Reservar 2-3 semanas antes. feliceatestaccio.com"},
+        {name:"Roscioli",tipo:"Salumeria-Trattoria de autor",precio:"35-55 EUR",pedir:"Carbonara + tabla de jamones y quesos",reserva:"SI",badge:"rsb-si",cuando:"1-2 semanas. salumeriaroscioli.com"},
+        {name:"Pizzeria da Remo",tipo:"Pizzeria autentica de barrio",precio:"12-18 EUR",pedir:"Pizza romana masa finisima con bordes quemados",reserva:"Walk-in",badge:"rsb-walk",cuando:"Walk-in. Ve a las 19h30. Solo locales."},
+        {name:"Suppli Roma",tipo:"Street food legendario",precio:"5-10 EUR",pedir:"Suppli caliente (croqueta de arroz + mozzarella)",reserva:"Walk-in",badge:"rsb-walk",cuando:"Walk-in. El mejor snack de Roma. Cola rapida."},
+        {name:"Sant'Eustachio Il Caffe",tipo:"Cafe historico 1938",precio:"3-8 EUR",pedir:"Gran espresso con crema secreta",reserva:"Walk-in",badge:"rsb-walk",cuando:"Walk-in. Junto al Pantheon. Receta secreta desde 1938."}
+      ],
+      reservas:[
+        {fecha:"22 Jul 2026 — 11:45pm Victoria",accion:"COMPRAR tickets Coliseo Underground + Arena",urgencia:"critica",url:"ticketing.colosseo.it",fechaOrd:new Date(2026,6,22)},
+        {fecha:"Agosto (2 semanas antes)",accion:"COMPRAR tickets Vaticano",urgencia:"alta",url:"museivaticani.va",fechaOrd:new Date(2026,7,8)},
+        {fecha:"Agosto (antes de salir)",accion:"RESERVAR Felice a Testaccio y Roscioli",urgencia:"alta",url:"feliceatestaccio.com",fechaOrd:new Date(2026,7,10)}
+      ]
+    },
+    {
+      id:"madrid", city:"Madrid", country:"España", flag:"🇪🇸",
+      arrival:"25 Ago 2026", departure:"28 Ago 2026", nights:3,
+      color:"#E65100", accent:"#FFE0B2",
+      hotel:{ name:"Four Points Flex by Sheraton Madrid", address:"Calle del Poeta Joan Maragall 1, 28020 Madrid", phone:"+34 91 555 00 00", checkin:"25 Ago", checkout:"28 Ago", confirmation:"95054623", room:"Standard double, Guest room, 1 Queen (2)", notes:"Zona financiera, bien comunicado con el centro. Verificar direccion exacta al confirmar reserva." },
+      flights:[
+        {type:"Llegada",from:"Roma FCO",to:"Madrid MAD",date:"25 Ago 2026"},
+        {type:"Salida",from:"Madrid MAD",to:"Praga PRG",date:"28 Ago 2026"}
+      ],
+      mustdo:[
+        {name:"Museo del Prado",tipo:"Museo / Arte",cost:"15 EUR",reserva:"Recomendada",urgencia:"media",cuando_victoria:"museodelprado.es. Gratis 18-20h lun-sab.",url:"museodelprado.es",nota:"Las Meninas de Velazquez. Goya. El Bosco. Gratis de 18-20h lun-sabado."},
+        {name:"Museo Reina Sofia",tipo:"Museo / Arte Moderno",cost:"12 EUR",reserva:"Recomendada",urgencia:"media",cuando_victoria:"museoreinasofia.es. Gratis dom todo el dia.",url:"museoreinasofia.es",nota:"El Guernica de Picasso. Gratis lun-vie 19-21h, sab 14:30-21h, dom todo el dia."},
+        {name:"Palacio Real + Plaza de Oriente",tipo:"Atraccion historica",cost:"18 EUR",reserva:"Recomendada",urgencia:"media",cuando_victoria:"5-12 Ago 2026 en Victoria",url:"tickets.patrimonionacional.es",nota:"Reserva para saltarse la cola de taquilla. 18 EUR adulto sin guia."},
+        {name:"Mercado de San Miguel",tipo:"Gastronomia / Tapas",cost:"20-35 EUR",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"Walk-in. 10h-24h.",url:"",nota:"El mercado gastronomico mas iconico de Madrid. Ostras, jamon, vinos."},
+        {name:"Aperitivo en La Latina (domingo)",tipo:"Experiencia / Tapeo",cost:"20-30 EUR",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"Domingo 13h-16h (27 Ago es domingo)",url:"",nota:"El domingo de La Latina es una religion madrilena. Juana La Loca para la tortilla."}
+      ],
+      restaurants:[
+        {name:"Juana La Loca",tipo:"Bar de tapas / Tortilla legendaria",precio:"15-25 EUR",pedir:"La mejor tortilla de patatas de Madrid",reserva:"Walk-in",badge:"rsb-walk",cuando:"Walk-in a las 13h. +34 913 64 05 25 para mesa."},
+        {name:"Sala de Despiece",tipo:"Tapas de autor / Calle Ponzano",precio:"30-50 EUR",pedir:"Todo lo que salga del carnicero",reserva:"SI",badge:"rsb-si",cuando:"saladedespiece.com con semanas de antelacion."},
+        {name:"Casa Julio",tipo:"Bar de croquetas legendario",precio:"15-25 EUR",pedir:"Croquetas de jamon, bacalao y boletus",reserva:"Walk-in",badge:"rsb-walk",cuando:"Walk-in. Malasana. Siempre con gente."},
+        {name:"Taberna de la Daniela",tipo:"Cocido madrileno / Taberna clasica",precio:"25-40 EUR",pedir:"Cocido madrileno completo (solo mediodia)",reserva:"Recomendada",badge:"rsb-rec",cuando:"tabernadaniela.com. Solo almuerzo."},
+        {name:"Mercado de Vallehermoso",tipo:"Mercado autentico / Brunch sabado",precio:"15-25 EUR",pedir:"Kitchen 154 + Tu Trufa. Musica en vivo.",reserva:"Walk-in",badge:"rsb-walk",cuando:"Sabado al mediodia. El Madrid sin turistas."}
+      ],
+      reservas:[
+        {fecha:"5-12 Ago 2026",accion:"COMPRAR tickets Palacio Real Madrid",urgencia:"media",url:"tickets.patrimonionacional.es",fechaOrd:new Date(2026,7,5)},
+        {fecha:"Agosto (antes de salir)",accion:"RESERVAR Sala de Despiece",urgencia:"alta",url:"saladedespiece.com",fechaOrd:new Date(2026,7,15)}
+      ]
+    },
+    {
+      id:"praga", city:"Praga", country:"Rep. Checa", flag:"🇨🇿",
+      arrival:"28 Ago 2026", departure:"31 Ago 2026", nights:3,
+      color:"#880E4F", accent:"#FCE4EC",
+      hotel:{ name:"Hilton Prague Atrium", address:"Pobřežní 1, 186 00 Praha 8", phone:"+420 224 841 111", checkin:"28 Ago", checkout:"31 Ago", confirmation:"3391126011", room:"King Guest Room (2)", notes:"A 10 minutos del centro historico en metro." },
+      flights:[
+        {type:"Llegada",from:"Madrid MAD",to:"Praga PRG",date:"28 Ago 2026"},
+        {type:"Salida",from:"Praga PRG",to:"Viena VIE",date:"31 Ago 2026"}
+      ],
+      mustdo:[
+        {name:"Castillo de Praga + Catedral de San Vito",tipo:"Atraccion historica",cost:"15 EUR",reserva:"Recomendada",urgencia:"media",cuando_victoria:"hrad.cz con dias de antelacion",url:"hrad.cz",nota:"El castillo mas grande del mundo. Ve entre semana a las 8am para el cambio de guardia sin multitudes."},
+        {name:"Puente de Carlos al amanecer",tipo:"Experiencia / Icono",cost:"Gratis",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"5-6am. El mejor momento del dia.",url:"",nota:"El mismo puente es radicalmente diferente a las 6am (solo locales corriendo) y a las 11am (multitudes). Merece el madrugon."},
+        {name:"Barrio Judio — Josefov",tipo:"Cultura / Historia",cost:"15 EUR",reserva:"Recomendada",urgencia:"media",cuando_victoria:"jewishmuseum.cz con dias de antelacion",url:"jewishmuseum.cz",nota:"Sinagogas historicas y cementerio judio medieval. Uno de los barrios judios mejor preservados de Europa."},
+        {name:"Plaza Ciudad Vieja + Reloj Astronomico",tipo:"Atraccion / Icono",cost:"Gratis",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"Ve a las horas en punto para ver el mecanismo",url:"",nota:"El reloj toca a las horas. Ve a las 8, 9 o 10am con menos gente."},
+        {name:"Cafes de Vinohrady / Zizkov",tipo:"Experiencia / Barrio local",cost:"5-15 EUR",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"Tarde / noche",url:"",nota:"Los barrios donde viven los praguenses. Cafes autenticos sin turistas."}
+      ],
+      restaurants:[
+        {name:"Cafe Savoy",tipo:"Cafe historico Art Nouveau 1893",precio:"15-25 EUR",pedir:"Desayuno Savoy + Vetrani (profiterol checo)",reserva:"Recomendada",badge:"rsb-rec",cuando:"cafesavoy.ambi.cz. Muy popular en fin de semana."},
+        {name:"Kolacherie",tipo:"Panaderia artesanal / Pasteles checos reales",precio:"5-10 EUR",pedir:"Kolace de amapola o ciruelas. La alternativa al trdelnik turistico.",reserva:"Walk-in",badge:"rsb-walk",cuando:"Walk-in. Llega temprano. Celetna Street."},
+        {name:"Lokal Dlouha",tipo:"Cerveceria checa autentica",precio:"10-18 EUR",pedir:"Svickova (ternera + crema + knedliky) + Pilsner de barril",reserva:"Recomendada fin de semana",badge:"rsb-rec",cuando:"lokal-dlouha.ambi.cz para cenas y fines de semana."},
+        {name:"Nase Maso",tipo:"Carniceria-restaurante de autor",precio:"8-15 EUR",pedir:"Sandwich de carne a la brasa + Tartare fresco",reserva:"Walk-in",badge:"rsb-walk",cuando:"Walk-in. Cerrado domingos. Cola al mediodia."},
+        {name:"Cafe Louvre",tipo:"Cafe literario historico 1902",precio:"12-20 EUR",pedir:"Menu del dia + Torta de chocolate + Pannkuchen con cerezas",reserva:"Walk-in",badge:"rsb-walk",cuando:"Walk-in desde las 8h. Donde Kafka tomaba su cafe."}
+      ],
+      reservas:[
+        {fecha:"12-20 Ago 2026",accion:"RESERVAR Cafe Savoy Praga",urgencia:"alta",url:"cafesavoy.ambi.cz",fechaOrd:new Date(2026,7,12)},
+        {fecha:"Agosto (antes de salir)",accion:"RESERVAR Lokal Dlouha para cena",urgencia:"media",url:"lokal-dlouha.ambi.cz",fechaOrd:new Date(2026,7,20)}
+      ]
+    },
+    {
+      id:"viena", city:"Viena", country:"Austria", flag:"🇦🇹",
+      arrival:"31 Ago 2026", departure:"2 Sep 2026", nights:2,
+      color:"#6A1B9A", accent:"#E1BEE7",
+      hotel:{ name:"Hotel Astoria Vienna, Curio by Hilton", address:"Führichgasse 1, 1010 Wien", phone:"+43 1 515 77", checkin:"31 Ago", checkout:"2 Sep", confirmation:"3385361388", room:"King Classic Room (2)", notes:"Corazon del 1er distrito. A pasos de la Opera y Karntner Strasse." },
+      flights:[
+        {type:"Llegada",from:"Praga PRG",to:"Viena VIE",date:"31 Ago 2026"},
+        {type:"Salida",from:"Viena VIE",to:"Berlin BER",date:"2 Sep 2026"}
+      ],
+      mustdo:[
+        {name:"Opera de Viena — Tour o Funcion",tipo:"Cultura / Musica",cost:"15-250 EUR",reserva:"SI para funcion",urgencia:"alta",cuando_victoria:"wiener-staatsoper.at con semanas",url:"wiener-staatsoper.at",nota:"Una funcion en la Opera es experiencia de vida. Entradas de pie desde 13 EUR. Tours diurnos sin reserva."},
+        {name:"Palacio de Schonbrunn",tipo:"Palacio / Historia Imperial",cost:"15-23 EUR",reserva:"Recomendada",urgencia:"media",cuando_victoria:"schoenbrunn.at con dias de antelacion",url:"schoenbrunn.at",nota:"Residencia veraniega de los Habsburgo. Los jardines son gratis."},
+        {name:"Kunsthistorisches Museum",tipo:"Museo / Arte",cost:"21 EUR",reserva:"Recomendada",urgencia:"media",cuando_victoria:"khm.at con dias de antelacion",url:"khm.at",nota:"La coleccion de arte mas importante de Austria. Vermeer, Rembrandt, Bruegel."},
+        {name:"Naschmarkt (sabado + mercado de pulgas)",tipo:"Mercado / Gastronomia",cost:"10-25 EUR",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"Sab 6h-18h30. Llegas el 31 Ago (lunes) a Viena.",url:"",nota:"El mercado mas grande y diverso de Viena. Abre lun-sab. El sabado tiene mercado de pulgas anexo."},
+        {name:"Paseo por el Ringstrasse",tipo:"Experiencia / Arquitectura",cost:"Gratis",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"A pie o tranvia historico (1 EUR)",url:"",nota:"El boulevard mas bello de Europa. Opera, Parlamento, Ayuntamiento, Burgtheater."}
+      ],
+      restaurants:[
+        {name:"Cafe Sacher Wien",tipo:"Salon de te historico 1876",precio:"18-30 EUR",pedir:"Original Sachertorte + Melange (cafe vienes)",reserva:"Recomendada",badge:"rsb-rec",cuando:"sacher.com con 2-3 semanas. Sin reserva 30-45 min de cola."},
+        {name:"Demel",tipo:"Konditorei imperial desde 1786",precio:"15-25 EUR",pedir:"Kaiserschmarrn + Apfelstrudel + Anna Demel Cake",reserva:"Walk-in (temprano)",badge:"rsb-walk",cuando:"demel.com | Llega antes de las 10h. Ventana de takeaway tambien."},
+        {name:"Cafe Central",tipo:"Gran Cafe vienes historico 1876",precio:"20-35 EUR",pedir:"Desayuno vienes + Gulash + Tafelspitz (ternera)",reserva:"Recomendada",badge:"rsb-rec",cuando:"cafecentral.wien | Donde Trotsky jugaba ajedrez y Freud tomaba cafe."},
+        {name:"Cafe Hawelka",tipo:"Cafe de artistas y bohemios 1939",precio:"10-18 EUR",pedir:"Buchteln con mermelada de ciruela (SOLO por las noches)",reserva:"Walk-in",badge:"rsb-walk",cuando:"Walk-in. Cerrado martes. Abre hasta la 1h."},
+        {name:"Naschmarkt (almuerzo en el mercado)",tipo:"Mercado multicultural",precio:"10-25 EUR",pedir:"Quesos austriacos + kebab turco + frutas exoticas",reserva:"Walk-in",badge:"rsb-walk",cuando:"Lun-Sab. El sabado tiene mercado de pulgas."}
+      ],
+      reservas:[
+        {fecha:"15 Jul 2026",accion:"RESERVAR Cafe Sacher Wien para 1 Sep",urgencia:"alta",url:"sacher.com",fechaOrd:new Date(2026,6,15)},
+        {fecha:"15 Jul 2026",accion:"RESERVAR Cafe Central Viena",urgencia:"alta",url:"cafecentral.wien",fechaOrd:new Date(2026,6,15)}
+      ]
+    },
+    {
+      id:"berlin", city:"Berlin", country:"Alemania", flag:"🇩🇪",
+      arrival:"2 Sep 2026", departure:"5 Sep 2026", nights:3,
+      color:"#00695C", accent:"#B2EBF2",
+      hotel:{ name:"Waldorf Astoria Berlin", address:"Hardenbergstraße 28, 10623 Berlin", phone:"+49 30 8140 0", checkin:"2 Sep", checkout:"5 Sep", confirmation:"3374999686", room:"King Deluxe Room (2)", notes:"En Kurfurstendamm. A pasos de la Iglesia Kaiser Wilhelm. Hotel de lujo." },
+      flights:[
+        {type:"Llegada",from:"Viena VIE",to:"Berlin BER",date:"2 Sep 2026"},
+        {type:"Salida",from:"Berlin BER",to:"Paris CDG",date:"5 Sep 2026"}
+      ],
+      mustdo:[
+        {name:"Muro de Berlin + East Side Gallery",tipo:"Historia / Cultura",cost:"Gratis",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"Walk-in. Al aire libre.",url:"",nota:"El fragmento de muro mas largo. Los murales son impresionantes. Museo al aire libre de 1.3 km."},
+        {name:"Checkpoint Charlie",tipo:"Historia / Guerra Fria",cost:"Gratis exterior",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"Walk-in. El exterior ya es la experiencia.",url:"",nota:"El paso fronterizo mas famoso de la Guerra Fria. El exterior es gratis y ya es la experiencia."},
+        {name:"Isla de los Museos — Pergamonmuseum",tipo:"Museo / Arte",cost:"12-21 EUR",reserva:"Recomendada",urgencia:"media",cuando_victoria:"smb.museum con dias de antelacion",url:"smb.museum",nota:"El Altar de Pergamo es impresionante. 5 museos en una isla del rio Spree."},
+        {name:"Markthalle Neun — Street Food Thursday",tipo:"Gastronomia / Experiencia",cost:"10-20 EUR",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"Jueves 17-22h. Tu estas el 3 Sep (jueves)!",url:"markthalleneun.de",nota:"El evento gastronomico mas autentico de Berlin. El 3 Sep es jueves — no te lo pierdas."},
+        {name:"Barrio Kreuzberg / Neukolln",tipo:"Barrio alternativo / Experiencia",cost:"Gratis",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"Tarde / noche",url:"",nota:"La Berlin alternativa. Mejor arte callejero y mezcla cultural de Europa."}
+      ],
+      restaurants:[
+        {name:"Barra",tipo:"Neo-bistro Michelin Bib Gourmand",precio:"35-55 EUR",pedir:"Menu de temporada de pequenas raciones",reserva:"SI",badge:"rsb-si",cuando:"restaurantbarra.de con semanas de antelacion. Muy solicitado."},
+        {name:"Zur Letzten Instanz",tipo:"Restaurante historico aleman 1621",precio:"15-28 EUR",pedir:"Koenigsberger Klopse + Eisbein con chucrut",reserva:"Recomendada",badge:"rsb-rec",cuando:"zurletzteninstanz.de | El restaurante mas antiguo de Berlin."},
+        {name:"Konnopkes Imbiss",tipo:"Currywurst legendario 1930",precio:"4-8 EUR",pedir:"Currywurst sin piel. La salsa es la estrella.",reserva:"Walk-in",badge:"rsb-walk",cuando:"Walk-in. Bajo el viaducto U-Bahn. Cerrado domingos."},
+        {name:"The Barn",tipo:"Specialty coffee de culto",precio:"5-12 EUR",pedir:"V60 o Aeropress con granos de temporada",reserva:"Walk-in",badge:"rsb-walk",cuando:"thebarn.de | El mejor cafe de autor de Berlin."},
+        {name:"Markthalle Neun",tipo:"Street Food Thursday (jueves)",precio:"10-20 EUR",pedir:"Lo que haya — productores locales de Brandenburg",reserva:"Walk-in",badge:"rsb-walk",cuando:"Jueves 17-22h. Tu estas el 3 Sep (jueves)!"}
+      ],
+      reservas:[
+        {fecha:"15 Ago 2026",accion:"RESERVAR Barra Berlin para cena",urgencia:"alta",url:"restaurantbarra.de",fechaOrd:new Date(2026,7,15)},
+        {fecha:"3 Sep 2026 — tarde (recordatorio)",accion:"IR a Markthalle Neun Street Food Thursday (17-22h)",urgencia:"media",url:"markthalleneun.de",fechaOrd:new Date(2026,8,3)}
+      ]
+    },
+    {
+      id:"paris", city:"Paris", country:"Francia", flag:"🇫🇷",
+      arrival:"5 Sep 2026", departure:"7 Sep 2026", nights:2,
+      color:"#8A5A2A", accent:"#E8D5C2",
+      hotel:{ name:"Aparthotel Adagio Paris Centre Tour Eiffel", address:"14 Rue du Theatre, 75015 Paris", phone:"+33 1 45 71 05 91", checkin:"5 Sep", checkout:"7 Sep", confirmation:"QFQLBLKK", room:"King Room (2)", notes:"A pasos de la Torre Eiffel. Apartamentos con cocina. Barrio 15ème tranquilo y autentico." },
+      flights:[
+        {type:"Llegada",from:"Berlin BER",to:"Paris CDG",date:"5 Sep 2026"},
+        {type:"Salida",from:"Paris CDG",to:"Calgary YYC",date:"7 Sep 2026", flightNumber:"WS 9", departureTime:"14:00", arrivalTime:"15:10", conf:"Confirmed", note:"Aerogare 2 Term C"},
+        {type:"Salida",from:"Calgary YYC",to:"Victoria YYJ",date:"7 Sep 2026", flightNumber:"WS 271", departureTime:"18:55", arrivalTime:"19:35", conf:"Confirmed"}
+      ],
+      mustdo:[
+        {name:"Torre Eiffel — Cima en ascensor",tipo:"Icono / Experiencia",cost:"36.70 EUR adulto",reserva:"CRITICA",urgencia:"critica",cuando_victoria:"7-9 Jul 2026 — 3:00pm hora Victoria",url:"ticket.toureiffel.paris",nota:"ALARMA: 7 Jul a las 2:55pm Victoria. El sistema abre 60 dias antes a medianoche Paris = 3pm Victoria. Si fallas, vuelve a intentar el 8 Jul (para el dia 7 Sep)."},
+        {name:"Museo del Louvre",tipo:"Museo / Arte",cost:"32 EUR (no-europeos)",reserva:"Obligatoria",urgencia:"alta",cuando_victoria:"Julio-Agosto. Reservar franja horaria.",url:"ticket.louvre.fr",nota:"32 EUR en 2026 para no-europeos. Sin reserva 2-3h de cola. Cerrado martes. Mier y vie abren hasta 21:45."},
+        {name:"Ruta de Patisseries (itinerario del Excel)",tipo:"Gastronomia / Cultura",cost:"30-50 EUR total",reserva:"Ver sheet de patisseries",urgencia:"media",cuando_victoria:"Mañanas temprano 7-9am",url:"",nota:"Pierre Herme, Du Pain et des Idees (SOLO lun-vie), Stohrer, Angelina, Carl Marletti. Ver el Excel para el itinerario completo."},
+        {name:"Sacre-Coeur + Montmartre (sin trampas)",tipo:"Barrio / Paseo",cost:"Gratis",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"8-9am para sin turistas",url:"",nota:"El barrio es magico a las 8am. Evita los restaurantes en las escaleras — son trampa. Los cafes de las calles laterales son autenticos."},
+        {name:"Paseo por Le Marais al atardecer",tipo:"Barrio / Experiencia",cost:"Gratis",reserva:"Walk-in",urgencia:"walk",cuando_victoria:"Tarde",url:"",nota:"El barrio mas autentico de Paris. Galerias, cafes, barrio judio historico. L'As du Fallafel para cenar."}
+      ],
+      restaurants:[
+        {name:"Chez Janou",tipo:"Bistro provenzal autentico / Le Marais",precio:"30-40 EUR",pedir:"Mousse de chocolate del bowl gigante + platos provenzales",reserva:"SI OBLIGATORIA",badge:"rsb-si",cuando:"chezjanou.com | +33 1 42 72 28 41. Sin reserva esperas horas afuera."},
+        {name:"Pierre Herme (Rue Bonaparte)",tipo:"Alta Patisserie / El Picasso del macaron",precio:"15-25 EUR",pedir:"Macaron Ispahan (rosa+frambuesa+lychee) + Paris-Brest",reserva:"Walk-in",badge:"rsb-walk",cuando:"Walk-in 10h-20h. Evita la sucursal de los Champs-Elysees."},
+        {name:"Du Pain et des Idees",tipo:"Mejor boulangerie de Paris (SOLO Lun-Vie)",precio:"8-15 EUR",pedir:"Escargot de pistache y praline + Pain des amis",reserva:"Walk-in",badge:"rsb-walk",cuando:"CRITICO: solo abre lunes a viernes. Llega antes de las 8h."},
+        {name:"Stohrer (patisserie mas antigua del mundo, 1730)",tipo:"Patisserie historica — 300 anos",precio:"8-15 EUR",pedir:"Baba au Rhum + Puits d'Amour",reserva:"Walk-in",badge:"rsb-walk",cuando:"Walk-in. La patisserie mas antigua del mundo."},
+        {name:"Angelina (Rivoli)",tipo:"Salon de te historico 1903",precio:"18-25 EUR",pedir:"Chocolat Africain (el mas rico de Paris) + Mont-Blanc",reserva:"Recomendada",badge:"rsb-rec",cuando:"angelina-paris.fr con 2-3 semanas. O ve a las 7h30 entre semana."},
+        {name:"Kong",tipo:"Restaurante panoramico Franco-japones",precio:"60-90 EUR",pedir:"Menu degustacion + vistas al Sena desde la azotea",reserva:"SI",badge:"rsb-si",cuando:"kong.fr con semanas de antelacion."}
+      ],
+      reservas:[
+        {fecha:"7-9 Jul 2026 — 3:00pm hora Victoria",accion:"COMPRAR tickets Torre Eiffel (medianoche Paris)",urgencia:"critica",url:"ticket.toureiffel.paris",fechaOrd:new Date(2026,6,7)},
+        {fecha:"Julio 2026",accion:"COMPRAR tickets Louvre con franja horaria",urgencia:"alta",url:"ticket.louvre.fr",fechaOrd:new Date(2026,6,10)},
+        {fecha:"15 Jul 2026",accion:"RESERVAR Chez Janou Paris",urgencia:"alta",url:"chezjanou.com",fechaOrd:new Date(2026,6,15)},
+        {fecha:"22 Jul 2026",accion:"RESERVAR Angelina (Rivoli)",urgencia:"alta",url:"angelina-paris.fr",fechaOrd:new Date(2026,6,22)},
+        {fecha:"22 Jul 2026",accion:"RESERVAR Laduree Rue Royale (salon de te)",urgencia:"media",url:"laduree.com",fechaOrd:new Date(2026,6,22)}
+      ]
+    }
+  ]
+};
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let currentView = "overview";
+let currentCityId = null;
+let searchQuery = "";
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function getColor(d) { return d.color; }
+
+function urgBadge(u) {
+  const labels = { critica:"CRITICA", alta:"ALTA", media:"MEDIA", walk:"WALK-IN" };
+  const cls = { critica:"tag-reserva-si", alta:"tag-reserva-rec", media:"tag-reserva-rec", walk:"tag-reserva-no" };
+  return `<span class="tag ${cls[u]||'tag-reserva-no'}">${labels[u]||u}</span>`;
+}
+
+function urbClass(u) {
+  return { critica:"critica", alta:"alta", media:"media", walk:"walk" }[u] || "walk";
+}
+
+function section(id, icon, title, content, openByDefault) {
+  const saved = loadField('sec-' + id);
+  const isOpen = saved !== '' ? (saved === 'true') : openByDefault;
+  const openClass = isOpen ? " open" : "";
+  const bodyClass = isOpen ? " open" : "";
+  return `
+  <div class="section${openClass}" id="sec-${id}">
+    <div class="section-header" onclick="toggleSection('sec-${id}')">
+      <span class="section-title"><span class="section-icon">${icon}</span>${title}</span>
+      <span class="section-toggle">⌃</span>
+    </div>
+    <div class="section-body${bodyClass}">${content}</div>
+  </div>`;
+}
+
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isOpen = el.classList.toggle("open");
+  el.querySelector(".section-body").classList.toggle("open");
+  saveField('sec-' + id, isOpen ? 'true' : 'false');
+}
+
+// ─── RENDER OVERVIEW ─────────────────────────────────────────────────────────
+function renderOverview() {
+  const now = new Date();
+  const dep = TRIP.departure;
+  const diffDays = Math.ceil((dep.getTime() - now.getTime()) / (1000*60*60*24));
+  const days = Math.max(0, diffDays);
+  const weeks = Math.floor(days / 7);
+  let months = (dep.getFullYear() - now.getFullYear()) * 12 + (dep.getMonth() - now.getMonth());
+  if (now.getDate() > dep.getDate()) months--;
+  months = Math.max(0, months);
+
+  const query = searchQuery.toLowerCase().trim();
+  const filteredDests = query
+    ? TRIP.destinations.filter(d =>
+        d.city.toLowerCase().includes(query) ||
+        d.country.toLowerCase().includes(query) ||
+        d.hotel.name.toLowerCase().includes(query) ||
+        d.id.toLowerCase().includes(query)
+      )
+    : TRIP.destinations;
+
+  const cards = filteredDests.length > 0
+    ? filteredDests.map(d => `
+    <div class="overview-card" onclick="showCity('${d.id}')" style="--city-color:${d.color}">
+      <div class="ov-flag">${d.flag}</div>
+      <div class="ov-city">${d.city}</div>
+      <div class="ov-country">${d.country}</div>
+      <div class="ov-dates">${d.arrival} — ${d.departure}</div>
+      <div class="ov-nights">${d.nights} noches</div>
+      <div class="ov-hotel"><strong>${d.hotel.name}</strong>Check-in ${d.hotel.checkin} · Check-out ${d.hotel.checkout}</div>
+    </div>`).join('')
+    : `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">Sin resultados para "${searchQuery}"</div>`;
+
+  const allRes = [];
+  TRIP.destinations.forEach(d => {
+    d.reservas.forEach(r => allRes.push({...r, city:d.city, color:d.color}));
+  });
+  allRes.sort((a,b) => {
+    if (a.fechaOrd && b.fechaOrd) return a.fechaOrd - b.fechaOrd;
+    if (a.fechaOrd) return -1;
+    if (b.fechaOrd) return 1;
+    return 0;
+  });
+  const calHtml = allRes.map(r => {
+    const uc = urbClass(r.urgencia);
+    return `<div class="cal-card cal-${uc}">
+      <div class="cal-dot cal-dot-${uc}"></div>
+      <div>
+        <span class="cal-badge cal-badge-${uc}">${r.urgencia.toUpperCase()}</span>
+        <div class="cal-fecha">${r.fecha} — ${r.city}</div>
+        <div class="cal-accion">${r.accion}</div>
+        ${r.url ? `<a class="cal-url" href="https://${r.url}" target="_blank" rel="noopener">${r.url} ↗</a>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="overview active" id="view-overview">
+    <div class="hero" style="padding-top:68px">
+      <div class="hero-eyebrow">Itinerario personal · 4 viajeros</div>
+      <h1 class="hero-title">Europa 2026<br><em>${TRIP.traveler}</em></h1>
+      <div class="hero-meta">
+        <span>📅 ${TRIP.dates}</span>
+        <span>🏙 6 ciudades · 16 noches</span>
+        <span>🛫 YYJ Victoria, BC · Hora base PDT</span>
+      </div>
+      <div class="countdown-bar">
+        <div class="countdown-item"><div class="countdown-num">${months}</div><div class="countdown-label">Meses</div></div>
+        <div class="countdown-item"><div class="countdown-num">${weeks}</div><div class="countdown-label">Semanas</div></div>
+        <div class="countdown-item"><div class="countdown-num">${days}</div><div class="countdown-label">Días Totales</div></div>
+        <div class="countdown-item"><div class="countdown-num">6</div><div class="countdown-label">Ciudades</div></div>
+        <div class="countdown-item"><div class="countdown-num">16</div><div class="countdown-label">Noches</div></div>
+      </div>
+    </div>
+    <div style="max-width:900px;margin:0 auto;padding:0 20px">
+      <div class="search-wrap">
+        <input class="search-input" type="text" placeholder="🔍 Buscar ciudad, país, hotel..." value="${escapeHtml(searchQuery)}" oninput="onSearch(this.value)" id="searchInput">
+      </div>
+      <div class="backup-bar">
+        <button class="backup-btn" onclick="exportBackup()">📥 Exportar datos</button>
+        <button class="backup-btn" onclick="document.getElementById('importFile').click()">📤 Importar datos</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBackup(this)">
+        <span class="kbd-hint" style="margin-left:auto;">⌨ ← → para navegar</span>
+      </div>
+      <div class="overview-grid">${cards}</div>
+      <div class="cal-section-title">🔔 Calendario de Acciones — Ordenado por fecha (Hora Victoria, BC)</div>
+      <div class="global-cal">${calHtml}</div>
+    </div>
+  </div>`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function onSearch(val) {
+  searchQuery = val;
+  if (currentView === 'overview') {
+    renderApp();
+    setTimeout(() => {
+      const inp = document.getElementById('searchInput');
+      if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+    }, 50);
+  }
+}
+
+// ─── RENDER CITY ─────────────────────────────────────────────────────────────
+function renderCity(d) {
+  const idx = TRIP.destinations.findIndex(x => x.id === d.id);
+  const prev = TRIP.destinations[idx-1];
+  const next = TRIP.destinations[idx+1];
+
+  // HOTEL con confirmación y tipo precargados
+  const hotelHtml = `
+    <div class="hotel-grid">
+      <div class="hotel-field"><span class="field-label">Hotel</span><span class="field-value">${d.hotel.name}</span></div>
+      <div class="hotel-field"><span class="field-label">Dirección</span><span class="field-value">${d.hotel.address}</span></div>
+      <div class="hotel-field"><span class="field-label">Teléfono</span><span class="field-value"><a href="tel:${d.hotel.phone.replace(/\s/g,'')}">${d.hotel.phone}</a></span></div>
+      <div class="hotel-field"><span class="field-label">Check-in / Check-out</span><span class="field-value">${d.hotel.checkin} → ${d.hotel.checkout}</span></div>
+      <div class="hotel-field"><span class="field-label">Confirmación</span><input class="field-value editable" placeholder="Nº de confirmación" id="conf-${d.id}" value="${escapeHtml(loadField('conf-'+d.id) || d.hotel.confirmation || '')}" onchange="saveField('conf-'+d.id,this.value)"></div>
+      <div class="hotel-field"><span class="field-label">Tipo de habitación</span><input class="field-value editable" placeholder="Tipo de habitación" id="room-${d.id}" value="${escapeHtml(loadField('room-'+d.id) || d.hotel.room || '')}" onchange="saveField('room-'+d.id,this.value)"></div>
+    </div>
+    ${d.hotel.notes ? `<div class="hotel-note">💡 ${d.hotel.notes}</div>` : ''}`;
+
+  // FLIGHTS con datos precargados
+  const flightsHtml = d.flights.map((f,i) => {
+    const fnKey = 'fl-num-'+d.id+'-'+i;
+    const ftKey = 'fl-time-'+d.id+'-'+i;
+    const fcKey = 'fl-conf-'+d.id+'-'+i;
+    const flightNumSaved = loadField(fnKey);
+    const flightTimeSaved = loadField(ftKey);
+    const flightConfSaved = loadField(fcKey);
+
+    const flightNumber = flightNumSaved || f.flightNumber || '';
+    const flightTime = flightTimeSaved || (f.departureTime ? f.departureTime + ' → ' + f.arrivalTime : '');
+    const flightConf = flightConfSaved || f.conf || '';
+
+    let noteHtml = '';
+    if (f.note) {
+      noteHtml = `<div class="flight-note">📌 ${f.note}</div>`;
+    }
+
+    return `
+    <div class="flight-card">
+      <span class="flight-type" style="background:${d.color}">${f.type}</span>
+      <div class="flight-route">
+        <div class="flight-from-to">${f.from} <span class="flight-arrow">→</span> ${f.to}</div>
+        <div class="flight-date">${f.date}</div>
+        ${noteHtml}
+      </div>
+      <div class="flight-fields">
+        <input class="flight-input" placeholder="# Vuelo" id="${fnKey}" value="${escapeHtml(flightNumber)}" onchange="saveField('${fnKey}',this.value)">
+        <input class="flight-input" placeholder="Hora" id="${ftKey}" value="${escapeHtml(flightTime)}" onchange="saveField('${ftKey}',this.value)">
+        <input class="flight-input" placeholder="Confirmación" id="${fcKey}" value="${escapeHtml(flightConf)}" onchange="saveField('${fcKey}',this.value)">
+      </div>
+    </div>`;
+  }).join('');
+
+  // MUST DO
+  const mustDoHtml = d.mustdo.map(a => {
+    const uc = urbClass(a.urgencia||'walk');
+    const rbClass = `rb-${uc}`;
+    const reservaInfo = a.urgencia !== 'walk' ? `
+      <div class="reserva-block ${rbClass}">
+        <div class="rb-label">⏰ Reservar desde Victoria: ${a.cuando_victoria}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px">${a.nota}</div>
+        ${a.url ? `<a href="https://${a.url}" target="_blank" rel="noopener" style="color:var(--gold);font-size:10px">${a.url} ↗</a>` : ''}
+      </div>` : `<div style="font-size:11px;color:var(--muted);margin-top:5px">${a.nota}</div>`;
+    return `
+    <div class="activity-card">
+      <div class="activity-icon">${a.tipo.includes('Museo')?'🏛':a.tipo.includes('Gastro')||a.tipo.includes('Cafe')||a.tipo.includes('mercado')||a.tipo.includes('Mercado')?'🍽':a.tipo.includes('Historia')||a.tipo.includes('Cultura')?'🏛':a.tipo.includes('Barrio')||a.tipo.includes('Paseo')?'🚶':'📍'}</div>
+      <div>
+        <div class="activity-name">${a.name}</div>
+        <div class="activity-meta">
+          ${urgBadge(a.urgencia||'walk')}
+          <span class="tag tag-cost">${a.cost}</span>
+          <span class="tag tag-cost">${a.tipo}</span>
+        </div>
+        ${reservaInfo}
+      </div>
+      <div class="activity-link">${a.url ? `<a href="https://${a.url}" target="_blank" rel="noopener">↗</a>` : ''}</div>
+    </div>`;
+  }).join('');
+
+  // RESTAURANTS
+  const restosHtml = d.restaurants.map(r => `
+    <div class="resto-card">
+      <div>
+        <div class="resto-name">${r.name}</div>
+        <div class="resto-tipo">${r.tipo}</div>
+        <div class="resto-pedir">Pedir: <strong>${r.pedir}</strong></div>
+        <div class="resto-cuando" style="color:var(--muted);font-size:10px">⏰ ${r.cuando}</div>
+      </div>
+      <div class="resto-right">
+        <div class="resto-precio">${r.precio}</div>
+        <div><span class="resto-reserva-badge ${r.badge}">${r.reserva}</span></div>
+      </div>
+    </div>`).join('');
+
+  // RESERVAS CALENDARIO
+  const reservasSorted = [...d.reservas].sort((a,b) => {
+    if (a.fechaOrd && b.fechaOrd) return a.fechaOrd - b.fechaOrd;
+    if (a.fechaOrd) return -1;
+    if (b.fechaOrd) return 1;
+    return 0;
+  });
+  const calHtml = reservasSorted.map(r => {
+    const uc = urbClass(r.urgencia);
+    return `<div class="cal-card cal-${uc}">
+      <div class="cal-dot cal-dot-${uc}"></div>
+      <div>
+        <span class="cal-badge cal-badge-${uc}">${r.urgencia.toUpperCase()}</span>
+        <div class="cal-fecha">${r.fecha}</div>
+        <div class="cal-accion">${r.accion}</div>
+        ${r.url ? `<a class="cal-url" href="https://${r.url}" target="_blank" rel="noopener">${r.url} ↗</a>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const prevBtn = prev ? `<button class="nav-btn" onclick="showCity('${prev.id}')">← ${prev.city}</button>` : `<button class="nav-btn" onclick="showOverview()">← Resumen</button>`;
+  const nextBtn = next ? `<button class="nav-btn next" onclick="showCity('${next.id}')">${next.city} →</button>` : `<button class="nav-btn" onclick="showOverview()" style="background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:600">Volver al resumen</button>`;
+
+  return `
+  <div class="destination" id="dest-${d.id}" style="--city-color:${d.color}">
+    <div class="city-header">
+      <div>
+        <div class="city-title">${d.flag} ${d.city}</div>
+        <div class="city-dates">${d.country} · ${d.arrival} — ${d.departure} · ${d.nights} noches</div>
+      </div>
+      <div>
+        <div class="city-badge" style="background:${d.color}">${d.hotel.name.split(' ').slice(0,3).join(' ')}</div>
+        <div class="nav-btns" style="margin-top:6px">${prevBtn}${nextBtn}</div>
+      </div>
+    </div>
+    ${section('hotel-'+d.id,'🏨','Hotel & Alojamiento', hotelHtml, true)}
+    ${section('flights-'+d.id,'✈️','Vuelos / Transporte', flightsHtml, false)}
+    ${section('reservas-'+d.id,'🔔','Reservas & Calendario — Hora Victoria, BC', calHtml, true)}
+    ${section('mustdo-'+d.id,'📍','Actividades & Atracciones Imperdibles', mustDoHtml, true)}
+    ${section('restos-'+d.id,'🍽','Restaurantes & Cafés', restosHtml, false)}
+    <div class="footer-nav">
+      ${prevBtn}
+      <span class="footer-progress">${idx+1} / ${TRIP.destinations.length}</span>
+      ${nextBtn}
+    </div>
+  </div>`;
+}
+
+// ─── LOCAL STORAGE & TOAST ───────────────────────────────────────────────────
+function saveField(key, val) {
+  try {
+    localStorage.setItem('eu26_'+key, val);
+    showToast('Guardado ✓');
+  } catch(e) {
+    console.error("Error guardando en localStorage", e);
+    showToast('Error al guardar');
+  }
+}
+
+function loadField(key) {
+  try { return localStorage.getItem('eu26_'+key) || ''; } catch(e) { return ''; }
+}
+
+let toastTimeout;
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 1800);
+}
+
+// ─── BACKUP / EXPORT / IMPORT ────────────────────────────────────────────────
+function exportBackup() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('eu26_')) {
+      data[key] = localStorage.getItem(key);
+    }
+  }
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'europa2026_backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Backup descargado ✓');
+}
+
+function importBackup(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      let count = 0;
+      for (const [key, val] of Object.entries(data)) {
+        if (key.startsWith('eu26_')) {
+          localStorage.setItem(key, val);
+          count++;
+        }
+      }
+      showToast(`Importados ${count} campos ✓`);
+      renderApp();
+      if (currentView === 'overview') updateNav();
+    } catch(err) {
+      showToast('Error: archivo inválido');
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+function showOverview() {
+  currentView = "overview";
+  currentCityId = null;
+  searchQuery = "";
+  document.documentElement.style.setProperty('--city-color', '#c9a84c');
+  renderApp();
+  updateNav();
+  window.scrollTo(0,0);
+}
+
+function showCity(id) {
+  currentView = "city";
+  currentCityId = id;
+  const d = TRIP.destinations.find(x => x.id === id);
+  if (d) {
+    document.documentElement.style.setProperty('--city-color', d.color);
+  }
+  searchQuery = "";
+  renderApp();
+  updateNav();
+  window.scrollTo(0,0);
+}
+
+function updateNav() {
+  document.querySelectorAll('.nav-city').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  if (currentView === 'overview') {
+    document.querySelectorAll('.nav-city')[0].classList.add('active');
+  } else {
+    const idx = TRIP.destinations.findIndex(x => x.id === currentCityId);
+    if (idx >= 0) document.querySelectorAll('.nav-city')[idx+1].classList.add('active');
+  }
+}
+
+function renderApp() {
+  const app = document.getElementById('app');
+  if (currentView === 'overview') {
+    app.innerHTML = renderOverview();
+  } else {
+    const d = TRIP.destinations.find(x => x.id === currentCityId);
+    if (d) app.innerHTML = `<div style="padding-top:52px">${renderCity(d)}</div>`;
+  }
+}
+
+// ─── KEYBOARD NAVIGATION ─────────────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    if (currentView === 'overview') {
+      if (e.key === 'ArrowRight' && TRIP.destinations.length > 0) {
+        showCity(TRIP.destinations[0].id);
+      }
+    } else {
+      const idx = TRIP.destinations.findIndex(x => x.id === currentCityId);
+      if (e.key === 'ArrowLeft') {
+        if (idx > 0) showCity(TRIP.destinations[idx-1].id);
+        else showOverview();
+      } else {
+        if (idx < TRIP.destinations.length - 1) showCity(TRIP.destinations[idx+1].id);
+        else showOverview();
+      }
+    }
+  }
+  if (e.key === 'Escape') {
+    showOverview();
+  }
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+showOverview();
+</script>
+
+</body>
+</html>
